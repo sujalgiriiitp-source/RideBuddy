@@ -1,0 +1,10 @@
+{
+  "name": "ridebuddy-monorepo",
+  "private": true,
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "cd server && npm install && npm start"
+  }
+}

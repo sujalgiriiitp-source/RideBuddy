@@ -5,6 +5,12 @@ const config: CapacitorConfig = {
   appName: 'RideBuddy',
   webDir: 'dist',
   bundledWebRuntime: false,
+  android: {
+    buildOptions: {
+      sourceCompatibility: '17',
+      targetCompatibility: '17',
+    },
+  },
 }
 
 export default config
