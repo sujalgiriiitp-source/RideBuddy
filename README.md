@@ -268,3 +268,4 @@ This rebuilds web assets and syncs them to Android.
 - In-app chat
 - Notifications for join-request updates
 - Trip completion workflow and richer ratings
+# RideBuddy
