@@ -25,12 +25,12 @@ export const createRide = asyncHandler(async (req, res) => {
     from,
     to,
     date,
-    time,
-    vehicle,
+    time: time || '09:00',
+    vehicle: vehicle || 'Car',
     seats,
     availableSeats: seats,
     notes,
-    userId: req.user._id,
+    createdBy: req.user._id,
   })
 
   return res.status(201).json({
@@ -41,7 +41,7 @@ export const createRide = asyncHandler(async (req, res) => {
 })
 
 export const getRides = asyncHandler(async (req, res) => {
-  const { from, to, date, vehicle } = req.query
+  const { from, to, date, vehicle, page = 1, limit = 10 } = req.query
   const filter = {}
 
   if (from) {
@@ -64,17 +64,35 @@ export const getRides = asyncHandler(async (req, res) => {
     }
   }
 
-  const rides = await Ride.find(filter)
-    .populate('userId', 'name phone profilePhoto rating')
-    .sort({ date: 1, time: 1 })
+  const pageNum = Math.max(1, parseInt(page, 10) || 1)
+  const limitNum = Math.min(50, Math.max(1, parseInt(limit, 10) || 10))
+  const skip = (pageNum - 1) * limitNum
 
-  return res.status(200).json({ success: true, rides })
+  const [rides, total] = await Promise.all([
+    Ride.find(filter)
+      .populate('createdBy', 'name phone profilePhoto rating')
+      .sort({ date: 1, time: 1 })
+      .skip(skip)
+      .limit(limitNum),
+    Ride.countDocuments(filter),
+  ])
+
+  return res.status(200).json({
+    success: true,
+    rides,
+    pagination: {
+      page: pageNum,
+      limit: limitNum,
+      total,
+      pages: Math.ceil(total / limitNum),
+    },
+  })
 })
 
 export const getRideById = asyncHandler(async (req, res) => {
   const ride = await Ride.findById(req.params.id)
-    .populate('userId', 'name phone profilePhoto rating')
-    .populate('participants', 'name phone profilePhoto rating')
+    .populate('createdBy', 'name phone profilePhoto rating')
+    .populate('passengers', 'name phone profilePhoto rating')
 
   if (!ride) {
     return res.status(404).json({ success: false, message: 'Ride not found' })
@@ -82,7 +100,7 @@ export const getRideById = asyncHandler(async (req, res) => {
 
   const interestFilter = { rideId: ride._id, status: 'accepted' }
 
-  if (req.user && String(req.user._id) === String(ride.userId._id)) {
+  if (req.user && String(req.user._id) === String(ride.createdBy._id)) {
     interestFilter.status = { $in: ['pending', 'accepted', 'rejected'] }
   }
 
@@ -100,32 +118,31 @@ export const requestJoinRide = asyncHandler(async (req, res) => {
     return res.status(404).json({ success: false, message: 'Ride not found' })
   }
 
-  if (String(ride.userId) === String(req.user._id)) {
+  if (String(ride.createdBy) === String(req.user._id)) {
     return res.status(400).json({ success: false, message: 'You cannot join your own ride' })
   }
 
-  const existingRequest = await RideInterest.findOne({
-    userId: req.user._id,
-    rideId: ride._id,
-  })
-
-  if (existingRequest) {
-    return res.status(400).json({
-      success: false,
-      message: 'You already requested this ride',
-    })
+  if (ride.availableSeats <= 0) {
+    return res.status(400).json({ success: false, message: 'No seats available' })
   }
 
-  const request = await RideInterest.create({
-    userId: req.user._id,
-    rideId: ride._id,
-    message: req.body.message || '',
-  })
+  const alreadyJoined = ride.passengers.some(
+    (passengerId) => String(passengerId) === String(req.user._id),
+  )
 
-  return res.status(201).json({
+  if (alreadyJoined) {
+    return res.status(400).json({ success: false, message: 'You already joined this ride' })
+  }
+
+  ride.passengers.push(req.user._id)
+  ride.availableSeats -= 1
+
+  await ride.save()
+
+  return res.status(200).json({
     success: true,
-    message: 'Join request sent successfully',
-    request,
+    message: 'Ride joined successfully',
+    ride,
   })
 })
 
@@ -143,7 +160,7 @@ export const updateJoinRequestStatus = asyncHandler(async (req, res) => {
     return res.status(404).json({ success: false, message: 'Ride not found' })
   }
 
-  if (String(ride.userId) !== String(req.user._id)) {
+  if (String(ride.createdBy) !== String(req.user._id)) {
     return res.status(403).json({
       success: false,
       message: 'Only the ride owner can update join requests',
@@ -157,15 +174,15 @@ export const updateJoinRequestStatus = asyncHandler(async (req, res) => {
 
     if (request.status !== 'accepted') {
       ride.availableSeats -= 1
-      if (!ride.participants.includes(request.userId)) {
-        ride.participants.push(request.userId)
+      if (!ride.passengers.includes(request.userId)) {
+        ride.passengers.push(request.userId)
       }
     }
   }
 
   if (request.status === 'accepted' && status === 'rejected') {
     ride.availableSeats += 1
-    ride.participants = ride.participants.filter(
+    ride.passengers = ride.passengers.filter(
       (participantId) => String(participantId) !== String(request.userId),
     )
   }
@@ -183,8 +200,8 @@ export const updateJoinRequestStatus = asyncHandler(async (req, res) => {
 })
 
 export const getMyPostedRides = asyncHandler(async (req, res) => {
-  const rides = await Ride.find({ userId: req.user._id })
-    .populate('participants', 'name phone profilePhoto rating')
+  const rides = await Ride.find({ createdBy: req.user._id })
+    .populate('passengers', 'name phone profilePhoto rating')
     .sort({ date: -1 })
 
   const rideIds = rides.map((ride) => ride._id)
@@ -210,7 +227,7 @@ export const getMyJoinedRides = asyncHandler(async (req, res) => {
   const acceptedRequests = await RideInterest.find({ userId: req.user._id, status: 'accepted' })
     .populate({
       path: 'rideId',
-      populate: { path: 'userId', select: 'name phone profilePhoto rating' },
+      populate: { path: 'createdBy', select: 'name phone profilePhoto rating' },
     })
     .sort({ updatedAt: -1 })
 

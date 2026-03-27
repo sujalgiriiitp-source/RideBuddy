@@ -4,7 +4,7 @@ import { User } from '../models/User.js'
 import { asyncHandler } from '../middleware/asyncHandler.js'
 
 export const getMyProfile = asyncHandler(async (req, res) => {
-  const postedRides = await Ride.find({ userId: req.user._id }).sort({ date: -1 })
+  const postedRides = await Ride.find({ createdBy: req.user._id }).sort({ date: -1 })
 
   const acceptedInterests = await RideInterest.find({
     userId: req.user._id,
@@ -12,7 +12,7 @@ export const getMyProfile = asyncHandler(async (req, res) => {
   })
     .populate({
       path: 'rideId',
-      populate: { path: 'userId', select: 'name phone averageRating profilePhoto' },
+      populate: { path: 'createdBy', select: 'name phone averageRating profilePhoto' },
     })
     .sort({ createdAt: -1 })
 

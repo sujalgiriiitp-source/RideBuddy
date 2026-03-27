@@ -19,11 +19,13 @@ const rideSchema = new mongoose.Schema(
     time: {
       type: String,
       required: true,
+      default: '09:00',
     },
     vehicle: {
       type: String,
       enum: ['Bike', 'Car'],
       required: true,
+      default: 'Car',
     },
     seats: {
       type: Number,
@@ -42,15 +44,17 @@ const rideSchema = new mongoose.Schema(
       maxlength: 300,
       trim: true,
     },
-    userId: {
+    createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
       required: true,
+      alias: 'userId',
     },
-    participants: [
+    passengers: [
       {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
+        alias: 'participants',
       },
     ],
   },

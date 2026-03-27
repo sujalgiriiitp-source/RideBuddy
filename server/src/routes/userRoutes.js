@@ -1,32 +1,14 @@
 import { Router } from 'express'
-import { body, param } from 'express-validator'
 import { getMyProfile, rateUser, updateProfilePhoto } from '../controllers/userController.js'
 import { protect } from '../middleware/authMiddleware.js'
-import { validateRequest } from '../middleware/validateMiddleware.js'
+import { validateRequest, validateParams } from '../middleware/validationMiddleware.js'
+import { userSchemas } from '../utils/validation.js'
 
 const router = Router()
 
+router.get('/profile', protect, getMyProfile)
 router.get('/me', protect, getMyProfile)
-
-router.patch(
-  '/me/photo',
-  protect,
-  [body('profilePhoto').optional().isString().withMessage('profilePhoto must be a valid URL string')],
-  validateRequest,
-  updateProfilePhoto,
-)
-
-router.post(
-  '/:id/rate',
-  protect,
-  [
-    param('id').isMongoId().withMessage('Invalid user id'),
-    body('rating')
-      .isInt({ min: 1, max: 5 })
-      .withMessage('rating must be a number between 1 and 5'),
-  ],
-  validateRequest,
-  rateUser,
-)
+router.patch('/me/photo', protect, validateRequest(userSchemas.updatePhoto), updateProfilePhoto)
+router.post('/:id/rate', protect, validateParams(userSchemas.userId), validateRequest(userSchemas.rate), rateUser)
 
 export default router
