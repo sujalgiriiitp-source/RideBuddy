@@ -5,6 +5,7 @@
     "node": ">=18"
   },
   "scripts": {
-    "start": "cd server && npm install && npm start"
+    "postinstall": "npm --prefix server install",
+    "start": "npm --prefix server start"
   }
 }
