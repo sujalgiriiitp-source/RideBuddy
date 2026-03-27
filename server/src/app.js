@@ -37,7 +37,7 @@ app.use(express.urlencoded({ extended: true }))
 app.use(morgan('dev'))
 
 app.get('/', (req, res) => {
-  res.status(200).send('Server running')
+  res.send('RideBuddy API Running 🚀')
 })
 
 app.get('/api/health', (req, res) => {
@@ -45,7 +45,7 @@ app.get('/api/health', (req, res) => {
 })
 
 app.get('/api/test', (req, res) => {
-  res.json({ status: 'success 🚀' })
+  res.json({ message: 'Backend working perfectly 💯' })
 })
 
 app.use('/api/auth', authRoutes)
