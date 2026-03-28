@@ -49,15 +49,7 @@ if (process.env.FRONTEND_URL) {
 
 app.use(
   cors({
-    origin: (origin, callback) => {
-      // Allow requests with no origin (mobile apps, curl, Postman)
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true)
-      } else {
-        logger.warn(`CORS rejected: ${origin}`)
-        callback(new Error(`CORS: origin ${origin} not allowed`))
-      }
-    },
+    origin: allowedOrigins, // Use array directly instead of callback
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
