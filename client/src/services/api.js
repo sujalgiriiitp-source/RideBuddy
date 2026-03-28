@@ -25,6 +25,10 @@ const API_BASE_URL = resolveApiBaseUrl()
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
+  withCredentials: true, // Enable credentials (cookies, authorization headers)
+  headers: {
+    'Content-Type': 'application/json',
+  },
 })
 
 api.interceptors.request.use((config) => {
@@ -36,6 +40,18 @@ api.interceptors.request.use((config) => {
 
   return config
 })
+
+// Handle 401 responses by clearing token and redirecting to auth
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      localStorage.removeItem('ridebuddy_token')
+      window.location.href = '/auth'
+    }
+    return Promise.reject(error)
+  },
+)
 
 export const getErrorMessage = (error, fallback = 'Something went wrong') => {
   return error?.response?.data?.message || fallback

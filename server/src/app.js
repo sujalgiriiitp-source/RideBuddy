@@ -14,12 +14,6 @@ dotenv.config()
 
 const app = express()
 
-const allowedOrigins = process.env.CLIENT_URL
-  ? process.env.CLIENT_URL.split(',').map((origin) => origin.trim()).filter(Boolean)
-  : ['http://localhost:5173']
-
-const allowAllOrigins = allowedOrigins.includes('*')
-
 // Security middleware
 app.use(helmet()) // Add security headers
 
@@ -41,21 +35,39 @@ const authLimiter = rateLimit({
   message: 'Too many login attempts, please try again later',
 })
 
-// CORS configuration
+// CORS configuration with environment support
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:5174', // Fallback dev port
+  'https://ride-buddy-liart.vercel.app',
+]
+
+// Add frontend URL if specified in environment
+if (process.env.FRONTEND_URL) {
+  allowedOrigins.push(process.env.FRONTEND_URL)
+}
+
 app.use(
   cors({
     origin: (origin, callback) => {
-      if (!origin || allowAllOrigins || allowedOrigins.includes(origin)) {
-        return callback(null, true)
+      // Allow requests with no origin (mobile apps, curl, Postman)
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true)
+      } else {
+        logger.warn(`CORS rejected: ${origin}`)
+        callback(new Error(`CORS: origin ${origin} not allowed`))
       }
-
-      const corsError = new Error('CORS not allowed for this origin')
-      corsError.status = 403
-      return callback(corsError)
     },
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    exposedHeaders: ['X-Total-Count', 'X-Page-Count'],
+    maxAge: 86400, // Preflight cache: 24 hours
   }),
 )
+
+// Handle preflight OPTIONS requests explicitly
+app.options('*', cors())
 
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }))
