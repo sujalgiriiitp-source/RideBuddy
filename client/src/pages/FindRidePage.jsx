@@ -7,43 +7,60 @@ import { toDateInputValue } from '../utils/date'
 
 const FindRidePage = () => {
   const [filters, setFilters] = useState({ from: '', to: '', date: '', vehicle: '' })
+  const [activeFilters, setActiveFilters] = useState({})
   const [rides, setRides] = useState([])
+  const [page, setPage] = useState(1)
+  const [limit] = useState(10)
+  const [pagination, setPagination] = useState({ page: 1, pages: 1, total: 0, limit: 10 })
   const [isLoading, setIsLoading] = useState(true)
 
-  const fetchRides = useCallback(async (activeFilters = {}) => {
+  const fetchRides = useCallback(async (activeFiltersPayload = {}, pageValue = 1) => {
     setIsLoading(true)
 
+    const params = {
+      ...activeFiltersPayload,
+      page: pageValue,
+      limit,
+    }
+
+    Object.keys(params).forEach((key) => {
+      if (params[key] === '' || params[key] === null || params[key] === undefined) {
+        delete params[key]
+      }
+    })
+
     try {
-      const response = await api.get('/rides', { params: activeFilters })
+      const response = await api.get('/rides', { params })
       setRides(response.data.rides)
+      setPagination(
+        response.data.pagination || {
+          page: pageValue,
+          pages: 1,
+          total: response.data.rides?.length || 0,
+          limit,
+        },
+      )
     } catch (error) {
       toast.error(getErrorMessage(error, 'Failed to fetch rides'))
     } finally {
       setIsLoading(false)
     }
-  }, [])
+  }, [limit])
 
   useEffect(() => {
-    fetchRides()
-  }, [fetchRides])
+    fetchRides(activeFilters, page)
+  }, [fetchRides, activeFilters, page])
 
   const handleSearch = async (event) => {
     event.preventDefault()
-    fetchRides(filters)
+    setPage(1)
+    setActiveFilters(filters)
   }
 
   const resetFilters = async () => {
     setFilters({ from: '', to: '', date: '', vehicle: '' })
-    setIsLoading(true)
-
-    try {
-      const response = await api.get('/rides')
-      setRides(response.data.rides)
-    } catch (error) {
-      toast.error(getErrorMessage(error, 'Failed to reset filters'))
-    } finally {
-      setIsLoading(false)
-    }
+    setActiveFilters({})
+    setPage(1)
   }
 
   return (
@@ -110,6 +127,32 @@ const FindRidePage = () => {
           </div>
         )}
       </section>
+
+      {!isLoading && pagination.pages > 1 && (
+        <section className="section-card flex items-center justify-between p-4">
+          <button
+            type="button"
+            onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+            disabled={page <= 1}
+            className="secondary-btn px-3 py-2 text-xs disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Previous
+          </button>
+
+          <p className="text-sm font-medium text-slate-700">
+            Page {pagination.page} of {pagination.pages} · {pagination.total} rides
+          </p>
+
+          <button
+            type="button"
+            onClick={() => setPage((prev) => Math.min(pagination.pages, prev + 1))}
+            disabled={page >= pagination.pages}
+            className="secondary-btn px-3 py-2 text-xs disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Next
+          </button>
+        </section>
+      )}
     </div>
   )
 }

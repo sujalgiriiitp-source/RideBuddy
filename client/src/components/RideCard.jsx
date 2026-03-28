@@ -9,10 +9,12 @@ const RideCard = ({ ride, showActions = true }) => {
   const { user, isAuthenticated } = useAuth()
   const [isJoining, setIsJoining] = useState(false)
 
-  const formattedPhone = String(ride?.userId?.phone || '').replace(/\D/g, '')
+  const driver = ride?.createdBy || ride?.userId || null
+
+  const formattedPhone = String(driver?.phone || '').replace(/\D/g, '')
   const waLink = `https://wa.me/${formattedPhone}`
 
-  const isOwner = user?._id && ride?.userId?._id && String(user._id) === String(ride.userId._id)
+  const isOwner = user?._id && driver?._id && String(user._id) === String(driver._id)
   const hasSeats = Number(ride?.availableSeats || 0) > 0
 
   const handleJoinRide = async () => {
@@ -35,7 +37,7 @@ const RideCard = ({ ride, showActions = true }) => {
 
     try {
       await api.post(`/rides/${ride._id}/join`, { message: '' })
-      toast.success('Join request sent successfully')
+      toast.success('Ride joined successfully')
     } catch (error) {
       toast.error(getErrorMessage(error, 'Unable to join this ride'))
     } finally {
@@ -65,7 +67,7 @@ const RideCard = ({ ride, showActions = true }) => {
           <span className="font-medium">Seats:</span> {ride.availableSeats}/{ride.seats}
         </p>
         <p>
-          <span className="font-medium">Driver:</span> {ride?.userId?.name} ({ride?.userId?.phone})
+          <span className="font-medium">Driver:</span> {driver?.name || 'Unknown'} ({driver?.phone || 'N/A'})
         </p>
       </div>
 

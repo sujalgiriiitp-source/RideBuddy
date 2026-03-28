@@ -122,10 +122,9 @@ const AuthPage = () => {
             />
             <input
               className="input-field"
-              placeholder="Phone (with country code)"
+              placeholder="Phone (optional, 10 digits)"
               value={signupForm.phone}
               onChange={(event) => setSignupForm((prev) => ({ ...prev, phone: event.target.value }))}
-              required
             />
             <input
               className="input-field"

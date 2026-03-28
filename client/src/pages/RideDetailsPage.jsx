@@ -16,9 +16,12 @@ const RideDetailsPage = () => {
   const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
+  const driver = ride?.createdBy || ride?.userId || null
+  const passengers = ride?.passengers || ride?.participants || []
+
   const isOwner = useMemo(() => {
-    return ride && user && String(ride.userId?._id) === String(user._id)
-  }, [ride, user])
+    return ride && user && driver && String(driver._id) === String(user._id)
+  }, [ride, user, driver])
 
   const fetchRideDetails = useCallback(async () => {
     try {
@@ -61,8 +64,13 @@ const RideDetailsPage = () => {
   }
 
   const submitRating = async () => {
+    if (!driver?._id) {
+      toast.error('Driver not available for rating')
+      return
+    }
+
     try {
-      await api.post(`/users/${ride.userId._id}/rate`, { rating: Number(rating) })
+      await api.post(`/users/${driver._id}/rate`, { rating: Number(rating) })
       toast.success('Rating submitted')
     } catch (error) {
       toast.error(getErrorMessage(error, 'Unable to submit rating'))
@@ -97,10 +105,10 @@ const RideDetailsPage = () => {
             <span className="font-medium">Seats:</span> {ride.availableSeats}/{ride.seats}
           </p>
           <p>
-            <span className="font-medium">Driver:</span> {ride.userId.name} ({ride.userId.phone})
+            <span className="font-medium">Driver:</span> {driver?.name || 'Unknown'} ({driver?.phone || 'N/A'})
           </p>
           <p>
-            <span className="font-medium">Rating:</span> {ride.userId?.averageRating || 0}/5
+            <span className="font-medium">Rating:</span> {driver?.averageRating || 0}/5
           </p>
         </div>
 
@@ -108,7 +116,7 @@ const RideDetailsPage = () => {
 
         <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
           <a
-            href={`https://wa.me/${ride.userId.phone}`}
+            href={`https://wa.me/${String(driver?.phone || '').replace(/\D/g, '')}`}
             target="_blank"
             rel="noreferrer"
             className="rounded-xl bg-green-600 px-3 py-2 text-center text-sm font-semibold text-white transition hover:bg-green-700"
@@ -165,8 +173,8 @@ const RideDetailsPage = () => {
       <article className="section-card p-5">
         <h2 className="text-lg font-bold text-slate-900">Participants</h2>
         <div className="mt-2 space-y-2">
-          {ride.participants?.length ? (
-            ride.participants.map((participant) => (
+          {passengers.length ? (
+            passengers.map((participant) => (
               <p key={participant._id} className="rounded-lg bg-slate-50 p-2 text-sm text-slate-700">
                 {participant.name} - {participant.phone}
               </p>
