@@ -54,5 +54,32 @@ api.interceptors.response.use(
 )
 
 export const getErrorMessage = (error, fallback = 'Something went wrong') => {
-  return error?.response?.data?.message || fallback
+  const data = error?.response?.data
+  
+  // If there's a message, use it
+  if (data?.message) {
+    // If there are validation errors, append them
+    if (data?.errors && typeof data.errors === 'object') {
+      const errorsList = Object.entries(data.errors)
+        .map(([field, msg]) => `${field}: ${msg}`)
+        .join(', ')
+      return `${data.message} - ${errorsList}`
+    }
+    return data.message
+  }
+  
+  // If only validation errors (no message)
+  if (data?.errors && typeof data.errors === 'object') {
+    return Object.entries(data.errors)
+      .map(([field, msg]) => `${field}: ${msg}`)
+      .join(', ')
+  }
+  
+  // Network error
+  if (error?.message === 'Network Error') {
+    return 'Network error - please check your connection'
+  }
+  
+  // Generic fallback
+  return fallback
 }

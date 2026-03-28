@@ -40,15 +40,37 @@ export const AuthProvider = ({ children }) => {
   }
 
   const signup = useCallback(async (payload) => {
-    const response = await api.post('/auth/signup', payload)
-    persistAuth(response.data.token, response.data.user)
-    return response.data
+    try {
+      const response = await api.post('/auth/signup', payload)
+      persistAuth(response.data.token, response.data.user)
+      return response.data
+    } catch (error) {
+      // Enhanced error logging for debugging
+      console.error('[Signup Error]', {
+        status: error.response?.status,
+        message: error.response?.data?.message,
+        validationErrors: error.response?.data?.errors,
+        url: error.config?.url,
+        method: error.config?.method,
+        requestData: error.config?.data,
+      })
+      throw error
+    }
   }, [])
 
   const login = useCallback(async (payload) => {
-    const response = await api.post('/auth/login', payload)
-    persistAuth(response.data.token, response.data.user)
-    return response.data
+    try {
+      const response = await api.post('/auth/login', payload)
+      persistAuth(response.data.token, response.data.user)
+      return response.data
+    } catch (error) {
+      console.error('[Login Error]', {
+        status: error.response?.status,
+        message: error.response?.data?.message,
+        url: error.config?.url,
+      })
+      throw error
+    }
   }, [])
 
   const refreshProfile = useCallback(async () => {
