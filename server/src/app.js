@@ -35,6 +35,11 @@ const authLimiter = rateLimit({
   message: 'Too many login attempts, please try again later',
 })
 
+// Validate critical environment variables at startup
+if (!process.env.JWT_SECRET) {
+  console.warn('⚠️  WARNING: JWT_SECRET is not set. Auth will fail. Check your .env file.')
+}
+
 // CORS configuration with environment support
 const allowedOrigins = [
   'http://localhost:5173',
@@ -42,10 +47,13 @@ const allowedOrigins = [
   'https://ride-buddy-liart.vercel.app',
 ]
 
-// Add frontend URL if specified in environment
+// Add additional origins from environment
 if (process.env.FRONTEND_URL) {
   allowedOrigins.push(process.env.FRONTEND_URL)
 }
+
+// Azure backend doesn't need to be in CORS origins (it's the server, not client)
+// VITE_API_URL on Vercel should point to Azure backend URL
 
 app.use(
   cors({

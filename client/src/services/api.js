@@ -6,19 +6,27 @@ const resolveApiBaseUrl = () => {
   const nativeApiUrl = import.meta.env.VITE_NATIVE_API_URL?.trim()
   const isNativePlatform = Capacitor.isNativePlatform()
 
-  if (!isNativePlatform) {
-    return webApiUrl || '/api'
+  // For native mobile app
+  if (isNativePlatform) {
+    if (nativeApiUrl) {
+      console.log('[API] Using native API URL:', nativeApiUrl)
+      return nativeApiUrl
+    }
+    if (webApiUrl && !webApiUrl.startsWith('/')) {
+      console.log('[API] Using web API URL for native:', webApiUrl)
+      return webApiUrl
+    }
   }
 
-  if (nativeApiUrl) {
-    return nativeApiUrl
-  }
-
-  if (webApiUrl && !webApiUrl.startsWith('/api') && !webApiUrl.includes('localhost')) {
+  // For web (dev and production)
+  if (webApiUrl) {
+    console.log('[API] Using VITE_API_URL:', webApiUrl)
     return webApiUrl
   }
 
-  return 'https://your-backend-domain.com/api'
+  // Development fallback (local proxy)
+  console.log('[API] Using default /api (local proxy in dev)')
+  return '/api'
 }
 
 const API_BASE_URL = resolveApiBaseUrl()

@@ -6,6 +6,20 @@ import { logger } from './utils/logger.js'
 
 dotenv.config()
 
+// Validate required environment variables
+const requiredEnvVars = ['MONGO_URI', 'JWT_SECRET']
+const missingEnvVars = requiredEnvVars.filter((envVar) => !process.env[envVar])
+
+if (missingEnvVars.length > 0) {
+  console.error('❌ ERROR: Missing required environment variables:')
+  missingEnvVars.forEach((envVar) => {
+    console.error(`   - ${envVar}`)
+  })
+  console.error('\n📝 Fix: Create/update .env file with all required variables')
+  console.error('   See .env.example for the required format\n')
+  process.exit(1)
+}
+
 const startServer = async () => {
   const rawPort = process.env.PORT
   const parsedPort = Number.parseInt(rawPort || '5000', 10)
